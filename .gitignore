@@ -1,3 +1,5 @@
 venv
 __pycache__
 *.cfg
+access_token
+refresh_token
