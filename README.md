@@ -1,6 +1,6 @@
-# dwh
+# OneDrive DB update detector 
 
-Data warehouse related web app.
+Monitors a OneDrive directory for uploads of new CSV and DB files.
 
 # Virtual environment
 
