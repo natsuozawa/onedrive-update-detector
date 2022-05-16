@@ -9,8 +9,10 @@ app.config.from_pyfile('app.cfg')
 @app.route('/')
 def index():
     if read_tokens():
-        request_tokens(refresh=True)
-        return redirect(url_for('update_files'))
+        status, err = request_tokens(refresh=True)
+        if status:
+            return redirect(url_for('update_files'))
+        return err['error_description']
 
     return render_template('index.html', tenant=app.config['TENANT'], application_id=app.config['APPLICATION_ID'], redirect_url=app.config['REDIRECT_URL'], scope=permission_scope()) 
 
@@ -31,9 +33,14 @@ code:
 """
 def request_tokens(refresh=False, code=''):
     url = 'https://login.microsoftonline.com/' + app.config['TENANT'] + '/oauth2/v2.0/token'
+
+    # It is not clear whether we need to include the scope in this request.
+    # In https://docs.microsoft.com/en-us/onedrive/developer/rest-api/getting-started/graph-oauth , 
+    # it does not say that scope is required.
+    # However, in https://docs.microsoft.com/en-us/graph/auth-v2-user , the scope is required for the same endpoint.
+    # It seems like it works without the scope.
     data = {
         'client_id': app.config['APPLICATION_ID'], 
-        'scope': permission_scope(include_offline_acess=False),
         'grant_type': 'refresh_token' if refresh else 'authorization_code',
         'redirect_uri': app.config['REDIRECT_URL'],
         'client_secret': app.config['CLIENT_SECRET']
@@ -61,10 +68,8 @@ def request_tokens(refresh=False, code=''):
 """
 Create permission scope string.
 """
-def permission_scope(include_offline_acess=True):
-    permissions = ['files.read', 'user.read']
-    if include_offline_acess:
-        permissions.append('offline_acess')
+def permission_scope():
+    permissions = ['offline_access', 'user.read', 'files.read']
     return "%20".join(permissions)
 
 """
@@ -93,7 +98,8 @@ def read_tokens():
 Write refresh and access tokens into the refresh_token and access_token files.
 """
 def write_tokens():
-    with open('refresh_token', 'w+') as f:
-        f.write(app.config['REFRESH_TOKEN'])
     with open('access_token', 'w+') as f:
         f.write(app.config['ACCESS_TOKEN'])
+    if 'REFRESH_TOKEN' in app.config:
+        with open('refresh_token', 'w+') as f:
+            f.write(app.config['REFRESH_TOKEN'])
