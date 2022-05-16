@@ -17,7 +17,7 @@ $ source venv/bin/activate
 Install dependencies.
 
 ```
-pip3 install -r requirements.txt
+$ pip3 install -r requirements.txt
 ```
 
 # Azure Active Directory app registration
@@ -46,4 +46,10 @@ TENANT = "common", "organizations", or "consumers"
 APPLICATION_ID = corresponds to client_id, obtained from Azure Active Directory
 REDIRECT_URL = url of the app, corresponds to redirect_uri
 CLIENT_SECRET = client secret registered in the Azure Active Directory.
+```
+
+# Development
+
+```
+$ flask run --reload
 ```
