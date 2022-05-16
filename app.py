@@ -6,12 +6,15 @@ import os
 app = Flask(__name__)
 app.config.from_pyfile('app.cfg')
 
-@app.route('/')
+TOKEN_REFRESH_ENDPOINT = '/'
+
+@app.route(TOKEN_REFRESH_ENDPOINT)
 def index():
     if read_tokens():
         status, err = request_tokens(refresh=True)
         if status:
-            return redirect(url_for('update_files'))
+            redirect_to = request.args.get('redirect_to', 'update_files', type=str)
+            return redirect(redirect_to)
         return err['error_description']
 
     return render_template('index.html', tenant=app.config['TENANT'], application_id=app.config['APPLICATION_ID'], redirect_url=app.config['REDIRECT_URL'], scope=permission_scope()) 
@@ -20,7 +23,8 @@ def index():
 def register_token():
     status, err = request_tokens(refresh=False, code=request.args.get('code', type=str))
     if status:
-        return redirect(url_for('update_files'))
+        redirect_to = request.args.get('redirect_to', 'update_files', type=str)
+        return redirect(redirect_to)
     return err['error_description']
 
 @app.route('/update_files')
@@ -103,3 +107,17 @@ def write_tokens():
     if 'REFRESH_TOKEN' in app.config:
         with open('refresh_token', 'w+') as f:
             f.write(app.config['REFRESH_TOKEN'])
+
+@app.route('/download_file/<item_id>')
+def retrieve_file(item_id):
+    if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
+        # url_for does not work in this setting for an unknown reason.
+        return redirect('/' + '?redirect_to=' + request.path)
+    url = 'https://graph.microsoft.com/v1.0/me/drive/items/' + item_id + '/content'
+    headers = {
+        'Authorization': 'Bearer ' + app.config['ACCESS_TOKEN']
+    }
+    
+    r = requests.get(url=url, headers=headers)
+
+    return r.text
