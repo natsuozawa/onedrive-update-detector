@@ -46,7 +46,7 @@ The following are variables related to the Microsoft API. See the [documentation
 ```
 TENANT = "common", "organizations", or "consumers"
 APPLICATION_ID = corresponds to client_id, obtained from Azure Active Directory
-REDIRECT_URL = url of the app, corresponds to redirect_uri
+APPLICATION_URL = url of the app (no paths)
 CLIENT_SECRET = client secret registered in the Azure Active Directory.
 ```
 

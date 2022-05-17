@@ -18,7 +18,7 @@ def index():
             return redirect(redirect_to)
         return err['error_description']
 
-    return render_template('index.html', tenant=app.config['TENANT'], application_id=app.config['APPLICATION_ID'], redirect_url=app.config['REDIRECT_URL'], scope=permission_scope()) 
+    return render_template('index.html', tenant=app.config['TENANT'], application_id=app.config['APPLICATION_ID'], redirect_url=app.config['APPLICATION_URL'] + '/register_token', scope=permission_scope()) 
 
 @app.route('/register_token')
 def register_token():
@@ -47,7 +47,7 @@ def request_tokens(refresh=False, code=''):
     data = {
         'client_id': app.config['APPLICATION_ID'], 
         'grant_type': 'refresh_token' if refresh else 'authorization_code',
-        'redirect_uri': app.config['REDIRECT_URL'],
+        'redirect_uri': app.config['APPLICATION_URL'] + '/register_token',
         'client_secret': app.config['CLIENT_SECRET']
     }
 
@@ -142,7 +142,7 @@ def webhook():
         # url_for does not work in this setting for an unknown reason.
         return redirect('/' + '?redirect_to=' + request.path)
 
-    return create_webhook(request.args.get('path', '', type=str), app.config['NOTIFICATION_URL'])
+    return create_webhook(request.args.get('path', '', type=str), app.config['APPLICATION_URL'] + '/webhooks/notify')
 
 """
 Create a new webhook subscription at the notification_url. 
