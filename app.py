@@ -167,7 +167,6 @@ def create_webhook(path, notification_url):
         'expirationDateTime': expiration_date_time.strftime('%Y-%m-%dT%H:%M:%S.000000Z')
     }
 
-    print(data)
     r = requests.post(url=url, headers=headers, json=data)
     write_webhook(r.json())
     return r.json()
