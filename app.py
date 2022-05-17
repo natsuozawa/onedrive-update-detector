@@ -1,7 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for
 import requests
 
-import os
+import os, csv
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config.from_pyfile('app.cfg')
@@ -55,7 +56,7 @@ def request_tokens(refresh=False, code=''):
     else:
         data['code'] = code
 
-    r = requests.post(url, data = data)
+    r = requests.post(url, data=data)
     res = r.json()
 
     if 'error' in res:
@@ -114,10 +115,95 @@ def retrieve_file(item_id):
         # url_for does not work in this setting for an unknown reason.
         return redirect('/' + '?redirect_to=' + request.path)
     url = 'https://graph.microsoft.com/v1.0/me/drive/items/' + item_id + '/content'
-    headers = {
-        'Authorization': 'Bearer ' + app.config['ACCESS_TOKEN']
-    }
+    return retrieve_as(url, json=False)
     
-    r = requests.get(url=url, headers=headers)
+@app.route('/retrieve_files_at/<path>')
+def retrieve_children(path):
+    if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
+        # url_for does not work in this setting for an unknown reason.
+        return redirect('/' + '?redirect_to=' + request.path)
+    url = 'https://graph.microsoft.com/v1.0/me/drive/root:/' + path + ':/children'
+    return retrieve_as(url, json=True)
 
-    return r.text
+def retrieve_as(url, json=False):
+    if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
+        status, _ = request_tokens(refresh=True)
+        if not status:
+            return {} if json else ''
+    
+    headers = {'Authorization': 'Bearer ' + app.config['ACCESS_TOKEN']}
+
+    r = requests.get(url=url, headers=headers)
+    return r.json() if json else r.text
+ 
+@app.route('/webhooks/new')
+def webhook():
+    if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
+        # url_for does not work in this setting for an unknown reason.
+        return redirect('/' + '?redirect_to=' + request.path)
+
+    return create_webhook(request.args.get('path', '', type=str), app.config['NOTIFICATION_URL'])
+
+"""
+Create a new webhook subscription at the notification_url. 
+Path should be the path of the directory to monitor. Leave empty for root.
+"""
+def create_webhook(path, notification_url):
+    if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
+        status, _ = request_tokens(refresh=True)
+        if not status:
+            return {} 
+
+    url = 'https://graph.microsoft.com/v1.0/subscriptions'    
+    headers = {'Authorization': 'Bearer ' + app.config['ACCESS_TOKEN']}
+
+    # Microsoft allows a maximum of 30 days. Subtract 1 to allow timezone differences.
+    expiration_date_time = datetime.now() + timedelta(29)
+
+    data = {
+        'changeType': 'updated',
+        'resource': '/me/drive/root/' + path,
+        'notificationUrl': notification_url,
+        'expirationDateTime': expiration_date_time.strftime('%Y-%m-%dT%H:%M:%S.000000Z')
+    }
+
+    print(data)
+    r = requests.post(url=url, headers=headers, json=data)
+    write_webhook(r.json())
+    return r.json()
+
+@app.route("/webhooks/delete/<webhook_id>")
+def drop_webhook(webhook_id):
+    if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
+        # url_for does not work in this setting for an unknown reason.
+        return redirect('/' + '?redirect_to=' + request.path)
+    if delete_webhook(webhook_id):
+        return 'Success.'
+    return 'Failed to delete webhook.'
+
+def delete_webhook(webhook_id):
+    if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
+        status, _ = request_tokens(refresh=True)
+        if not status:
+            return False
+
+    url = 'https://graph.microsoft.com/v1.0/subscriptions/' + webhook_id
+    headers = {'Authorization': 'Bearer ' + app.config['ACCESS_TOKEN']}
+
+    r = requests.delete(url=url, headers=headers)
+    return r.status_code == 204
+
+def write_webhook(webhook_response):
+    if 'id' not in webhook_response:
+        return
+    
+    with open('webhooks.csv', 'a+') as f:
+        cw = csv.writer(f)
+        cw.writerow([webhook_response['id'], webhook_response['resource']])
+
+@app.route('/webhooks/notify', methods=['POST'])
+def webhook_receive_notification():
+    return request.args.get('validationToken')
+    
+if __name__ == '__main__':
+    app.run(host="0.0.0.0", port=5000, debug=True)

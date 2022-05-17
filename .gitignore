@@ -3,3 +3,4 @@ __pycache__
 *.cfg
 access_token
 refresh_token
+webhooks.csv
