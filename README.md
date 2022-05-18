@@ -2,7 +2,11 @@
 
 Monitors a OneDrive directory for uploads of new CSV and DB files.
 
-This app only supports storing credentials for one user.
+Due to OneDrive API restrictions, this service will only monitor files under `/me/drive/approot`, which usually corresponds to `/Apps/app_name` in your personal OneDrive.
+
+The service requires the file write permission to create the approot special directory.
+
+This service only supports storing credentials for one user.
 
 # Virtual environment
 
@@ -46,6 +50,7 @@ The following are variables related to the Microsoft API. See the [documentation
 ```
 TENANT = "common", "organizations", or "consumers"
 APPLICATION_ID = corresponds to client_id, obtained from Azure Active Directory
+REDIRECT_URL = corresponds to redirect_uri, should be set to localhost:5000 for development with ngrok.
 APPLICATION_URL = url of the app (no paths)
 CLIENT_SECRET = client secret registered in the Azure Active Directory.
 ```

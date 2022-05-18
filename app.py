@@ -18,7 +18,7 @@ def index():
             return redirect(redirect_to)
         return err['error_description']
 
-    return render_template('index.html', tenant=app.config['TENANT'], application_id=app.config['APPLICATION_ID'], redirect_url=app.config['APPLICATION_URL'] + '/register_token', scope=permission_scope()) 
+    return render_template('index.html', tenant=app.config['TENANT'], application_id=app.config['APPLICATION_ID'], redirect_url=app.config['REDIRECT_URL'], scope=permission_scope()) 
 
 @app.route('/register_token')
 def register_token():
@@ -47,7 +47,7 @@ def request_tokens(refresh=False, code=''):
     data = {
         'client_id': app.config['APPLICATION_ID'], 
         'grant_type': 'refresh_token' if refresh else 'authorization_code',
-        'redirect_uri': app.config['APPLICATION_URL'] + '/register_token',
+        'redirect_uri': app.config['REDIRECT_URL'],
         'client_secret': app.config['CLIENT_SECRET']
     }
 
@@ -74,7 +74,7 @@ def request_tokens(refresh=False, code=''):
 Create permission scope string.
 """
 def permission_scope():
-    permissions = ['offline_access', 'user.read', 'files.read']
+    permissions = ['offline_access', 'user.read', 'files.readwrite']
     return "%20".join(permissions)
 
 """
@@ -122,7 +122,7 @@ def retrieve_children(path):
     if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
         # url_for does not work in this setting for an unknown reason.
         return redirect('/' + '?redirect_to=' + request.path)
-    url = 'https://graph.microsoft.com/v1.0/me/drive/root:/' + path + ':/children'
+    url = 'https://graph.microsoft.com/v1.0/me/drive/special/approot:/' + path + ':/children'
     return retrieve_as(url, json=True)
 
 def retrieve_as(url, json=False):
@@ -142,13 +142,13 @@ def webhook():
         # url_for does not work in this setting for an unknown reason.
         return redirect('/' + '?redirect_to=' + request.path)
 
-    return create_webhook(request.args.get('path', '', type=str), app.config['APPLICATION_URL'] + '/webhooks/notify')
+    return create_webhook(app.config['APPLICATION_URL'] + '/webhooks/notify')
 
 """
 Create a new webhook subscription at the notification_url. 
 Path should be the path of the directory to monitor. Leave empty for root.
 """
-def create_webhook(path, notification_url):
+def create_webhook(notification_url):
     if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
         status, _ = request_tokens(refresh=True)
         if not status:
@@ -162,7 +162,7 @@ def create_webhook(path, notification_url):
 
     data = {
         'changeType': 'updated',
-        'resource': '/me/drive/root/' + path,
+        'resource': '/me/drive/special/approot',
         'notificationUrl': notification_url,
         'expirationDateTime': expiration_date_time.strftime('%Y-%m-%dT%H:%M:%S.000000Z')
     }
