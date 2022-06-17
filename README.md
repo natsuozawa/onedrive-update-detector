@@ -1,4 +1,4 @@
-# OneDrive DB update detector 
+# OneDrive DB update detector
 
 Monitors a OneDrive directory for uploads of new CSV and DB files.
 
@@ -43,7 +43,7 @@ User.Read
 
 # Configuration
 
-This app requires the following environment variables to be configured. 
+This app requires the following environment variables to be configured.
 
 The following are variables related to the Microsoft API. See the [documentation](https://docs.microsoft.com/en-us/graph/auth-v2-user) for more details.
 
@@ -59,5 +59,5 @@ CLIENT_SECRET = client secret registered in the Azure Active Directory.
 
 ```
 $ ngrok http 5000
-$ python3 app.py
+$ python3 index.py
 ```

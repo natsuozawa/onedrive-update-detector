@@ -3,4 +3,5 @@ __pycache__
 *.cfg
 access_token
 refresh_token
+delta_link
 webhooks.csv
