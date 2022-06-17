@@ -1,8 +1,9 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect
 import requests
 
 import os, csv
 from datetime import datetime, timedelta
+import threading
 
 app = Flask(__name__)
 app.config.from_pyfile('app.cfg')
@@ -18,7 +19,7 @@ def index():
             return redirect(redirect_to)
         return err['error_description']
 
-    return render_template('index.html', tenant=app.config['TENANT'], application_id=app.config['APPLICATION_ID'], redirect_url=app.config['REDIRECT_URL'], scope=permission_scope()) 
+    return render_template('index.html', tenant=app.config['TENANT'], application_id=app.config['APPLICATION_ID'], redirect_url=app.config['REDIRECT_URL'], scope=permission_scope())
 
 @app.route('/register_token')
 def register_token():
@@ -34,18 +35,18 @@ def update_files():
 
 """
 Send a POST request to obtain access and refresh tokens from Microsoft.
-code: 
+code:
 """
 def request_tokens(refresh=False, code=''):
     url = 'https://login.microsoftonline.com/' + app.config['TENANT'] + '/oauth2/v2.0/token'
 
     # It is not clear whether we need to include the scope in this request.
-    # In https://docs.microsoft.com/en-us/onedrive/developer/rest-api/getting-started/graph-oauth , 
+    # In https://docs.microsoft.com/en-us/onedrive/developer/rest-api/getting-started/graph-oauth ,
     # it does not say that scope is required.
     # However, in https://docs.microsoft.com/en-us/graph/auth-v2-user , the scope is required for the same endpoint.
     # It seems like it works without the scope.
     data = {
-        'client_id': app.config['APPLICATION_ID'], 
+        'client_id': app.config['APPLICATION_ID'],
         'grant_type': 'refresh_token' if refresh else 'authorization_code',
         'redirect_uri': app.config['REDIRECT_URL'],
         'client_secret': app.config['CLIENT_SECRET']
@@ -79,7 +80,7 @@ def permission_scope():
 
 """
 Read refresh and access tokens from the refresh_token and access_token files.
-If they do not exist or are empty, return False. 
+If they do not exist or are empty, return False.
 Otherwise, read the tokens into the configuration files and return True.
 """
 def read_tokens():
@@ -112,15 +113,13 @@ def write_tokens():
 @app.route('/download_file/<item_id>')
 def retrieve_file(item_id):
     if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
-        # url_for does not work in this setting for an unknown reason.
         return redirect('/' + '?redirect_to=' + request.path)
     url = 'https://graph.microsoft.com/v1.0/me/drive/items/' + item_id + '/content'
     return retrieve_as(url, json=False)
-    
+
 @app.route('/retrieve_files_at/<path>')
 def retrieve_children(path):
     if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
-        # url_for does not work in this setting for an unknown reason.
         return redirect('/' + '?redirect_to=' + request.path)
     url = 'https://graph.microsoft.com/v1.0/me/drive/special/approot:/' + path + ':/children'
     return retrieve_as(url, json=True)
@@ -130,12 +129,12 @@ def retrieve_as(url, json=False):
         status, _ = request_tokens(refresh=True)
         if not status:
             return {} if json else ''
-    
+
     headers = {'Authorization': 'Bearer ' + app.config['ACCESS_TOKEN']}
 
     r = requests.get(url=url, headers=headers)
     return r.json() if json else r.text
- 
+
 @app.route('/webhooks/new')
 def webhook():
     if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
@@ -145,16 +144,16 @@ def webhook():
     return create_webhook(app.config['APPLICATION_URL'] + '/webhooks/notify')
 
 """
-Create a new webhook subscription at the notification_url. 
+Create a new webhook subscription at the notification_url.
 Path should be the path of the directory to monitor. Leave empty for root.
 """
 def create_webhook(notification_url):
     if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
         status, _ = request_tokens(refresh=True)
         if not status:
-            return {} 
+            return {}
 
-    url = 'https://graph.microsoft.com/v1.0/subscriptions'    
+    url = 'https://graph.microsoft.com/v1.0/subscriptions'
     headers = {'Authorization': 'Bearer ' + app.config['ACCESS_TOKEN']}
 
     # Microsoft allows a maximum of 30 days. Subtract 1 to allow timezone differences.
@@ -170,6 +169,41 @@ def create_webhook(notification_url):
     r = requests.post(url=url, headers=headers, json=data)
     write_webhook(r.json())
     return r.json()
+
+@app.before_first_request
+def update_all_webhooks_if_token():
+    if read_tokens():
+        status, _ = request_tokens(refresh=True)
+        if status:
+            # Run this on a separate thread so that
+            # when Microsoft sends a request to /webhooks/notify to confirm the endpoint
+            # the request is not blocked by this function.
+            thread = threading.Thread(target=update_all_webhohoks)
+            thread.start()
+
+def update_all_webhohoks():
+    with open('webhooks.csv', 'r+') as f:
+        cr = csv.reader(f)
+        for row in cr:
+            update_webhook(row[0])
+
+def update_webhook(webhook_id):
+    if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
+        status, _ = request_tokens(refresh=True)
+        if not status:
+            return False
+
+    url = 'https://graph.microsoft.com/v1.0/subscriptions/' + webhook_id
+    headers = {'Authorization': 'Bearer ' + app.config['ACCESS_TOKEN']}
+
+    expiration_date_time = datetime.now() + timedelta(29)
+    data = {
+        'expirationDateTime': expiration_date_time.strftime('%Y-%m-%dT%H:%M:%S.000000Z')
+    }
+
+    r = requests.patch(url=url, headers=headers, json=data)
+
+    return 'expirationDateTime' in r.json()
 
 @app.route("/webhooks/delete/<webhook_id>")
 def drop_webhook(webhook_id):
@@ -195,14 +229,14 @@ def delete_webhook(webhook_id):
 def write_webhook(webhook_response):
     if 'id' not in webhook_response:
         return
-    
+
     with open('webhooks.csv', 'a+') as f:
         cw = csv.writer(f)
         cw.writerow([webhook_response['id'], webhook_response['resource']])
 
 @app.route('/webhooks/notify', methods=['POST'])
 def webhook_receive_notification():
-    return request.args.get('validationToken')
-    
+    return request.args.get('validationToken', '')
+
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)
