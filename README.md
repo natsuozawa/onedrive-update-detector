@@ -1,4 +1,4 @@
-# OneDrive DB update detector
+# OneDrive update detector
 
 Monitors a OneDrive directory for uploads of new files.
 
