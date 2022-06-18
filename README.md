@@ -1,8 +1,15 @@
 # OneDrive DB update detector
 
-Monitors a OneDrive directory for uploads of new CSV and DB files.
+Monitors a OneDrive directory for uploads of new files.
 
 Due to OneDrive API restrictions, this service will only monitor files under `/me/drive/approot`, which usually corresponds to `/Apps/app_name` in your personal OneDrive.
+
+Also due to OneDrive API restrictions, this service will instead:
+
+1. Detect any folders where files with the configured file type(s) were created or updated
+2. Downloads the newest files from the folders detected above.
+
+You can specify which files to check for in the configuration below.
 
 The service requires the file write permission to create the approot special directory.
 
@@ -50,9 +57,10 @@ The following are variables related to the Microsoft API. See the [documentation
 ```
 TENANT = "common", "organizations", or "consumers"
 FILE_TYPES = file types to look for, comma separated - e.g. ".csv,.db"
+DOWNLOAD_LOCATION = path to the folder where files are downloaded to.
 APPLICATION_ID = corresponds to client_id, obtained from Azure Active Directory
 REDIRECT_URL = corresponds to redirect_uri, should be set to localhost:5000 for development with ngrok.
-APPLICATION_URL = url of the app (no paths)
+APPLICATION_URL = url of the app (no paths) - eg. "https://123.jp.ngrok.io"
 CLIENT_SECRET = client secret registered in the Azure Active Directory.
 ```
 

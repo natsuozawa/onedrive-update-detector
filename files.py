@@ -9,11 +9,19 @@ from tokens import request_tokens
 
 @app.before_first_request
 def create_download_folder():
-    if not os.path.exists('downloads'):
-        os.makedirs('downloads')
+    if app.config['DOWNLOAD_LOCATION'] and not os.path.exists(app.config['DOWNLOAD_LOCATION']):
+        os.makedirs(app.config['DOWNLOAD_LOCATION'])
 
 @app.route('/update_files')
 def update_files():
+    if retrieve_changes():
+        return 'Successful.'
+    return 'Failed.'
+
+"""
+Return True if retrieval was successful. False otherwise.
+"""
+def retrieve_changes():
     # 1. Retrieve the latest updates using the delta API endpoint.
     # 2. For any file changes, keep track of the parent folder.
     # 3. For each parent folder, retrieve the newest csv or db file in that folder. (configure file type)
@@ -24,13 +32,14 @@ def update_files():
 
     folders = retrieve_updated_folders()
     if folders is None:
-        return 'Failed.'
-
-    if len(folders) == 0:
-        return 'No changes.'
+        return False
 
     for folder_id, folder_name in folders:
         res = retrieve_children(folder_id)
+
+        if 'value' not in res:
+            return False
+
         newest_item_id, newest_item_extension = newest_item(res['value'])
         newest_item_content = retrieve_file(newest_item_id)
 
@@ -38,7 +47,7 @@ def update_files():
         with open('downloads/' + folder_name + newest_item_extension, 'w+') as f:
             f.write(newest_item_content)
 
-    return 'Successfully downloaded ' + str(len(folders)) + ' files.'
+    return True
 
 """
 Use the delta API endpoint to retrieve folders in which files were changed.
@@ -73,7 +82,9 @@ def retrieve_updated_folders():
         # There are changes to record.
         if 'value' in res:
             for item in res['value']:
-                if 'file' not in item:
+                if 'file' not in item or 'parentReference' not in item or 'name' not in item['parentReference']:
+                    # If name is not in item, it means the item was deleted.
+                    # We don't check for deletions.
                     continue
 
                 file_types = app.config['FILE_TYPES'].split(',')
@@ -108,7 +119,7 @@ def newest_item(items):
     # Initialize to the earliest datetime.
     newest_created_date_time = datetime(1970, 1, 1)
     for item in items:
-        if 'file' not in item:
+        if 'file' not in item or 'name' not in item or 'id' not in item:
             continue
 
         file_types = app.config['FILE_TYPES'].split(',')
