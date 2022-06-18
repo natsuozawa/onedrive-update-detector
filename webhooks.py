@@ -7,6 +7,7 @@ import threading
 
 from app import app
 from tokens import request_tokens, read_tokens
+from files import retrieve_changes
 
 @app.route('/webhooks/new')
 def webhook():
@@ -109,4 +110,5 @@ def write_webhook(webhook_response):
 
 @app.route('/webhooks/notify', methods=['POST'])
 def webhook_receive_notification():
+    retrieve_changes()
     return request.args.get('validationToken', '')
