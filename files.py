@@ -44,7 +44,7 @@ def retrieve_changes():
         newest_item_content = retrieve_file(newest_item_id)
 
         # Save downloaded content under the folder name + file type extension.
-        with open('downloads/' + folder_name + newest_item_extension, 'w+') as f:
+        with open(app.config['DOWNLOAD_LOCATION'] + '/' + folder_name + newest_item_extension, 'w+') as f:
             f.write(newest_item_content)
 
     return True
