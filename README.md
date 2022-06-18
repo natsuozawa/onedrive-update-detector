@@ -49,6 +49,7 @@ The following are variables related to the Microsoft API. See the [documentation
 
 ```
 TENANT = "common", "organizations", or "consumers"
+FILE_TYPES = file types to look for, comma separated - e.g. ".csv,.db"
 APPLICATION_ID = corresponds to client_id, obtained from Azure Active Directory
 REDIRECT_URL = corresponds to redirect_uri, should be set to localhost:5000 for development with ngrok.
 APPLICATION_URL = url of the app (no paths)

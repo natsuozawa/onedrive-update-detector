@@ -26,10 +26,6 @@ def register_token():
         return redirect(redirect_to)
     return err['error_description']
 
-@app.route('/update_files')
-def update_files():
-    return 'Work in progress.'
-
 """
 Send a POST request to obtain access and refresh tokens from Microsoft.
 code:

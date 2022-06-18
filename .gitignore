@@ -5,3 +5,4 @@ access_token
 refresh_token
 delta_link
 webhooks.csv
+downloads/*
