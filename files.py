@@ -19,14 +19,14 @@ def update_files():
     return 'Failed.'
 
 """
+Approximate the behavior of downloading newly created files.
+1. Retrieve the latest updates using the delta API endpoint.
+2. For any file changes, keep track of the parent folder.
+3. For each parent folder, retrieve the newest csv or db file in that folder. (configure file type)
+4. Run custom script on these files.
 Return True if retrieval was successful. False otherwise.
 """
 def retrieve_changes():
-    # 1. Retrieve the latest updates using the delta API endpoint.
-    # 2. For any file changes, keep track of the parent folder.
-    # 3. For each parent folder, retrieve the newest csv or db file in that folder. (configure file type)
-    # 4. Run custom script on these files.
-
     if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
         return redirect('/' + '?redirect_to=' + request.path)
 
@@ -44,7 +44,7 @@ def retrieve_changes():
         newest_item_content = retrieve_file(newest_item_id)
 
         # Save downloaded content under the folder name + file type extension.
-        with open(app.config['DOWNLOAD_LOCATION'] + '/' + folder_name + newest_item_extension, 'w+') as f:
+        with open(app.config['DOWNLOAD_LOCATION'] + '/' + folder_name + newest_item_extension, 'w+b') as f:
             f.write(newest_item_content)
 
     return True
@@ -165,4 +165,4 @@ def retrieve_as(url, json=False):
     headers = {'Authorization': 'Bearer ' + app.config['ACCESS_TOKEN']}
 
     r = requests.get(url=url, headers=headers)
-    return r.json() if json else r.text
+    return r.json() if json else r.content

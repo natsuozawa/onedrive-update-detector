@@ -9,7 +9,7 @@ Also due to OneDrive API restrictions, this service will instead:
 1. Detect any folders where files with the configured file type(s) were created or updated
 2. Downloads the newest files from the folders detected above.
 
-You can specify which files to check for in the configuration below.
+You can specify which files to check for in the configuration below. Note that the webhook which starts this process is only triggered upon new file creation or file deletion.
 
 The service requires the file write permission to create the approot special directory.
 
