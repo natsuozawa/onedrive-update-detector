@@ -52,12 +52,16 @@ User.Read
 
 This app requires the following environment variables to be configured.
 
+```
+FLASK_APP = name of app
+FILE_TYPES = file types to look for, comma separated - e.g. ".csv,.db"
+DOWNLOAD_LOCATION = path to the folder where files are downloaded to.
+```
+
 The following are variables related to the Microsoft API. See the [documentation](https://docs.microsoft.com/en-us/graph/auth-v2-user) for more details.
 
 ```
 TENANT = "common", "organizations", or "consumers"
-FILE_TYPES = file types to look for, comma separated - e.g. ".csv,.db"
-DOWNLOAD_LOCATION = path to the folder where files are downloaded to.
 APPLICATION_ID = corresponds to client_id, obtained from Azure Active Directory
 REDIRECT_URL = corresponds to redirect_uri, should be set to localhost:5000 for development with ngrok.
 APPLICATION_URL = url of the app (no paths) - eg. "https://123.jp.ngrok.io"
