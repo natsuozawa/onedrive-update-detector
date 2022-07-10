@@ -56,6 +56,7 @@ This app requires the following environment variables to be configured.
 FLASK_APP = name of app
 FILE_TYPES = file types to look for, comma separated - e.g. ".csv,.db"
 DOWNLOAD_LOCATION = path to the folder where files are downloaded to.
+MODE = debug or production
 ```
 
 The following are variables related to the Microsoft API. See the [documentation](https://docs.microsoft.com/en-us/graph/auth-v2-user) for more details.
@@ -73,4 +74,10 @@ CLIENT_SECRET = client secret registered in the Azure Active Directory.
 ```
 $ ngrok http 5000
 $ python3 index.py
+```
+
+# Production
+
+```
+$ waitress-serve --port=5000 index:app
 ```
