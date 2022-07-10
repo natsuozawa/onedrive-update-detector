@@ -4,6 +4,7 @@ import requests
 import csv
 from datetime import datetime, timedelta
 import threading
+import os
 
 from app import app
 from tokens import request_tokens, read_tokens
@@ -56,10 +57,11 @@ def update_all_webhooks_if_token():
             thread.start()
 
 def update_all_webhohoks():
-    with open('webhooks.csv', 'r+') as f:
-        cr = csv.reader(f)
-        for row in cr:
-            update_webhook(row[0])
+    if 'webhooks.csv' in os.listdir():
+            with open('webhooks.csv', 'r+') as f:
+                cr = csv.reader(f)
+                for row in cr:
+                    update_webhook(row[0])
 
 def update_webhook(webhook_id):
     if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
