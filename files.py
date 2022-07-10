@@ -63,10 +63,11 @@ def retrieve_updated_folders():
     url = 'https://graph.microsoft.com/v1.0/me/drive/special/approot/delta'
 
     # Use delta link if saved.
-    with open('delta_link', 'r+') as f:
-        delta_link = f.readline()
-        if delta_link:
-            url = delta_link
+    if 'delta_link' in os.listdir():
+        with open('delta_link', 'r') as f:
+            delta_link = f.readline()
+            if delta_link:
+                url = delta_link
 
     headers = {'Authorization': 'Bearer ' + app.config['ACCESS_TOKEN']}
 
