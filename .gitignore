@@ -7,3 +7,4 @@ delta_link
 webhooks.csv
 downloads/*
 *.pyc
+script.py

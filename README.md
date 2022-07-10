@@ -31,7 +31,13 @@ Install dependencies.
 $ pip3 install -r requirements.txt
 ```
 
-Install ngrok from [here](https://ngrok.com).
+Copy (and edit) custom script file. To see how the script is called, look at files.py
+
+```
+$ cp script.example.py script.py
+```
+
+For development, install ngrok from [here](https://ngrok.com).
 
 # Azure Active Directory app registration
 This app needs to be registered on Azure Active Directory. In order to use personal accounts, select the option that allows all users to use the service.

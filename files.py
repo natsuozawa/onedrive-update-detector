@@ -7,6 +7,8 @@ from datetime import datetime
 from app import app
 from tokens import request_tokens
 
+from script import script
+
 @app.before_first_request
 def create_download_folder():
     if app.config['DOWNLOAD_LOCATION'] and not os.path.exists(app.config['DOWNLOAD_LOCATION']):
@@ -47,6 +49,7 @@ def retrieve_changes():
         with open(app.config['DOWNLOAD_LOCATION'] + '/' + folder_name + newest_item_extension, 'w+b') as f:
             f.write(newest_item_content)
 
+        script(folder_name, newest_item_extension)
     return True
 
 """
