@@ -62,7 +62,7 @@ This app requires the following environment variables to be configured.
 FLASK_APP = name of app
 FILE_TYPES = file types to look for, comma separated - e.g. ".csv,.db"
 DOWNLOAD_LOCATION = path to the folder where files are downloaded to.
-MODE = debug or production
+MODE = debug, development, or production
 ```
 
 The following are variables related to the Microsoft API. See the [documentation](https://docs.microsoft.com/en-us/graph/auth-v2-user) for more details.
@@ -84,6 +84,17 @@ $ python3 index.py
 
 # Production
 
+Set `MODE` environment variable to production. Make a tunnel using a service like Cloudflare Tunnel. Note that you should ONLY expose the `/webhooks/notify` endpoint to the public. Then run:
+
 ```
-$ waitress-serve --port=5000 index:app
+$ python3 index.py
 ```
+
+In case this is not in a virtual environment, replace python3 with the path obtained from the command:
+
+```
+$ source venv/bin/activate
+$ which python3
+```
+
+It may be sensible to create a systemd service for this. This application is not yet dockerized.
