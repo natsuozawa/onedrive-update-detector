@@ -9,6 +9,7 @@ import os
 from app import app
 from tokens import request_tokens, read_tokens
 from files import retrieve_changes
+from logger import logger
 
 @app.route('/webhooks/new')
 def webhook():
@@ -112,5 +113,6 @@ def write_webhook(webhook_response):
 
 @app.route('/webhooks/notify', methods=['POST'])
 def webhook_receive_notification():
+    logger.debug("Webhook notification received.")
     retrieve_changes()
     return request.args.get('validationToken', '')

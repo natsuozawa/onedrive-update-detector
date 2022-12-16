@@ -3,6 +3,7 @@ import requests
 
 import os
 from datetime import datetime
+import time
 
 from app import app
 from tokens import request_tokens
@@ -48,11 +49,8 @@ def retrieve_changes():
         newest_item_id, newest_item_extension = newest_item(res['value'])
         newest_item_content = retrieve_file(newest_item_id)
 
-        # Save downloaded content under the folder name + file type extension.
-        with open(app.config['DOWNLOAD_LOCATION'] + '/' + folder_name + newest_item_extension, 'w+b') as f:
-            f.write(newest_item_content)
+        output_changes(folder_name, newest_item_extension, newest_item_content)
 
-        script(folder_name, newest_item_extension)
     return True, None
 
 """
@@ -114,11 +112,14 @@ def retrieve_updated_folders():
             r = requests.get(url + '(token=\'' + next_link + '\')', headers=headers)
             res = r.json()
         else:
-            return None, {'error_description': 'No folders updated.'}
+            return None, res
 
     # Record the delta link for future use.
     with open('delta_link', 'w+') as f:
         f.write(res['@odata.deltaLink'])
+
+    if len(folders) == 0:
+        return None, {"message": "Nothing updated."}
     return folders, None
 
 """
@@ -186,3 +187,10 @@ def remove_delta():
         os.remove('delta_link')
         return 'Successful.'
     return 'No delta_link file to remove.'
+
+def output_changes(folder_name, newest_item_extension, newest_item_content):
+    # Save downloaded content under the folder name + file type extension.
+    with open(app.config['DOWNLOAD_LOCATION'] + '/' + folder_name + newest_item_extension, 'w+b') as f:
+        f.write(newest_item_content)
+    script(folder_name, newest_item_extension)
+
