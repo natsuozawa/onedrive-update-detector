@@ -4,6 +4,7 @@ import requests
 import os
 
 from app import app
+from logger import logger
 
 TOKEN_REFRESH_ENDPOINT = '/'
 
@@ -14,7 +15,7 @@ def index():
         if status:
             redirect_to = request.args.get('redirect_to', 'update_files', type=str)
             return redirect(redirect_to)
-        return err['error_description']
+        return err
 
     return render_template('index.html', tenant=app.config['TENANT'], application_id=app.config['APPLICATION_ID'], redirect_url=app.config['REDIRECT_URL'], scope=permission_scope())
 
@@ -54,6 +55,7 @@ def request_tokens(refresh=False, code=''):
     res = r.json()
 
     if 'error' in res:
+        logger.warn(res)
         return False, res
 
     app.config['ACCESS_TOKEN'] = res['access_token']
@@ -83,14 +85,18 @@ def read_tokens():
             if t:
                 app.config['REFRESH_TOKEN'] = t
             else:
+                logger.debug("Refresh token not obtained.")
                 return False
         with open('access_token', 'r') as f:
             t = f.readline()
             if t:
                 app.config['ACCESS_TOKEN'] = t
             else:
+                logger.debug("Access token not obtained.")
                 return False
+            logger.debug("Access token successfully obtained.")
         return True
+    logger.debug("Token(s) missing.")
     return False
 
 """

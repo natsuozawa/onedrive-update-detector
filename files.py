@@ -6,6 +6,7 @@ from datetime import datetime
 
 from app import app
 from tokens import request_tokens
+from logger import logger
 
 from script import script
 
@@ -16,9 +17,10 @@ def create_download_folder():
 
 @app.route('/update_files')
 def update_files():
-    if retrieve_changes():
+    res, err = retrieve_changes()
+    if res:
         return 'Successful.'
-    return 'Failed.'
+    return err
 
 """
 Approximate the behavior of downloading newly created files.
@@ -26,21 +28,22 @@ Approximate the behavior of downloading newly created files.
 2. For any file changes, keep track of the parent folder.
 3. For each parent folder, retrieve the newest csv or db file in that folder. (configure file type)
 4. Run custom script on these files.
-Return True if retrieval was successful. False otherwise.
+Return True, None if retrieval was successful. False, res otherwise.
 """
 def retrieve_changes():
     if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
         return redirect('/' + '?redirect_to=' + request.path)
 
-    folders = retrieve_updated_folders()
+    folders, err = retrieve_updated_folders()
     if folders is None:
-        return False
+        return False, err
 
     for folder_id, folder_name in folders:
         res = retrieve_children(folder_id)
 
         if 'value' not in res:
-            return False
+            logger.warn(res)
+            return False, res
 
         newest_item_id, newest_item_extension = newest_item(res['value'])
         newest_item_content = retrieve_file(newest_item_id)
@@ -50,18 +53,21 @@ def retrieve_changes():
             f.write(newest_item_content)
 
         script(folder_name, newest_item_extension)
-    return True
+    return True, None
 
 """
 Use the delta API endpoint to retrieve folders in which files were changed.
 It is not possible to retrieve with more precision. (ie. retrieve folders only where files were newly created)
-Returns a set with the folder id and name pairs.
+Returns a set with the folder id and name pairs, and a response object.
 """
 def retrieve_updated_folders():
+    logger.debug('Retrieving updated folders')
     if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
-        status, _ = request_tokens(refresh=True)
+        status, err = request_tokens(refresh=True)
         if not status:
-            return None
+            logger.debug('Failed to obtain tokens.')
+            logger.debug(err)
+            return None, err
 
     url = 'https://graph.microsoft.com/v1.0/me/drive/special/approot/delta'
 
@@ -79,6 +85,9 @@ def retrieve_updated_folders():
     # If it contains neither, it is likely an error.
     r = requests.get(url, headers=headers)
     res = r.json()
+
+    if 'error' in res:
+        return None, res
 
     folders = set()
 
@@ -105,12 +114,12 @@ def retrieve_updated_folders():
             r = requests.get(url + '(token=\'' + next_link + '\')', headers=headers)
             res = r.json()
         else:
-            return None
+            return None, {'error_description': 'No folders updated.'}
 
     # Record the delta link for future use.
     with open('delta_link', 'w+') as f:
         f.write(res['@odata.deltaLink'])
-    return folders
+    return folders, None
 
 """
 Given a list of items, return the item with the newest creation date time
@@ -146,14 +155,14 @@ def newest_item(items):
     return newest_item_id, newest_item_extension
 
 
-@app.route('/download_file/<item_id>')
+# @app.route('/download_file/<item_id>')
 def retrieve_file(item_id):
     if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
         return redirect('/' + '?redirect_to=' + request.path)
     url = 'https://graph.microsoft.com/v1.0/me/drive/items/' + item_id + '/content'
     return retrieve_as(url, json=False)
 
-@app.route('/retrieve_files_at/<item_id>')
+# @app.route('/retrieve_files_at/<item_id>')
 def retrieve_children(item_id):
     if 'ACCESS_TOKEN' not in app.config or app.config['ACCESS_TOKEN'] == '':
         return redirect('/' + '?redirect_to=' + request.path)
@@ -170,3 +179,10 @@ def retrieve_as(url, json=False):
 
     r = requests.get(url=url, headers=headers)
     return r.json() if json else r.content
+
+@app.route('/remove_delta')
+def remove_delta():
+    if 'delta_link' in os.listdir():
+        os.remove('delta_link')
+        return 'Successful.'
+    return 'No delta_link file to remove.'
