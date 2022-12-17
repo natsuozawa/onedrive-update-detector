@@ -114,5 +114,7 @@ def write_webhook(webhook_response):
 @app.route('/webhooks/notify', methods=['POST'])
 def webhook_receive_notification():
     logger.debug("Webhook notification received.")
-    retrieve_changes()
+    res, err = retrieve_changes()
+    if not res:
+      logger.warn(err)
     return request.args.get('validationToken', '')
