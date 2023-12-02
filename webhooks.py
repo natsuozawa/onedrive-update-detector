@@ -17,7 +17,7 @@ def webhook():
         # url_for does not work in this setting for an unknown reason.
         return redirect('/' + '?redirect_to=' + request.path)
 
-    return create_webhook(app.config['APPLICATION_URL'] + '/webhooks/notify')
+    return create_webhook(app.config['NOTIFICATION_URL'] + '/webhooks/notify')
 
 """
 Create a new webhook subscription at the notification_url.

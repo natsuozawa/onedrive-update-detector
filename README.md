@@ -72,6 +72,7 @@ TENANT = "common", "organizations", or "consumers"
 APPLICATION_ID = corresponds to client_id, obtained from Azure Active Directory
 REDIRECT_URL = corresponds to redirect_uri, should be set to localhost:5000 for development with ngrok.
 APPLICATION_URL = url of the app (no paths) - eg. "https://123.jp.ngrok.io"
+NOTIFICATION_URL = url of the app for webhooks to be notified to
 CLIENT_SECRET = client secret registered in the Azure Active Directory.
 ```
 
