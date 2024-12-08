@@ -93,16 +93,21 @@ def retrieve_updated_folders():
         # There are changes to record.
         if 'value' in res:
             for item in res['value']:
-                if 'file' not in item or 'parentReference' not in item or 'name' not in item['parentReference']:
-                    # If name is not in item, it means the item was deleted.
+                if 'file' not in item or 'parentReference' not in item:
+                # if 'file' not in item or 'parentReference' not in item or 'name' not in item['parentReference']:
+                    # If name is not in item, it used to mean that the item was deleted (from the last delta_link).
                     # We don't check for deletions.
+
+                    # From around 2024 December, it looks like the parentReference does not include a name field for all items.
                     continue
 
                 file_types = app.config['FILE_TYPES'].split(',')
 
                 # The file name ends with one of the configured file types.
                 if any([item['name'].endswith(file_type) for file_type in file_types]):
-                    folder = (item['parentReference']['id'], item['parentReference']['name'])
+                    folder_path = item['parentReference']['path']
+                    folder_name = folder_path.split('/')[-1]
+                    folder = (item['parentReference']['id'], folder_name)
                     folders.add(folder)
 
         if '@odata.deltaLink' in res:
@@ -144,7 +149,11 @@ def newest_item(items):
             # Note: .endswith is not used here to accommodate certain Android export issues where .db is exported as .db.txt.
             # TODO: fix once the issue is resolved.
             if file_type in item['name']:
-                item_created_date_time = datetime.strptime(item['createdDateTime'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                # The API used to return millisecond or nanosecond values for the createdDateTime field.
+                try:
+                    item_created_date_time = datetime.strptime(item['createdDateTime'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                except ValueError:
+                    item_created_date_time = datetime.strptime(item['createdDateTime'], '%Y-%m-%dT%H:%M:%SZ')
 
                 # The current item is the newest so far.
                 if newest_created_date_time < item_created_date_time:
