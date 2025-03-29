@@ -2,8 +2,8 @@ from flask import redirect, request
 import requests
 
 import os
-from datetime import datetime
-import time
+from datetime import datetime, timedelta
+from urllib.parse import quote
 
 from app import app
 from tokens import request_tokens
@@ -43,7 +43,7 @@ def retrieve_changes():
         res = retrieve_children(folder_id)
 
         if 'value' not in res:
-            logger.warn(res)
+            logger.warning(res)
             return False, res
 
         newest_item_id, newest_item_extension = newest_item(res['value'])
@@ -67,7 +67,10 @@ def retrieve_updated_folders():
             logger.debug(err)
             return None, err
 
-    url = 'https://graph.microsoft.com/v1.0/me/drive/special/approot/delta'
+    # Due to a bug in the API, somehow we can't initiate the delta link without arguments.
+    timestamp_28_days_ago = (datetime.utcnow() - timedelta(days=28)).strftime('%Y-%m-%dT%H:%M:%SZ')
+    delta_query_timestamp = quote(timestamp_28_days_ago)
+    url = f'https://graph.microsoft.com/v1.0/me/drive/special/approot/delta?token={delta_query_timestamp}'
 
     # Use delta link if saved.
     if 'delta_link' in os.listdir():
@@ -81,10 +84,13 @@ def retrieve_updated_folders():
     # The response will contain a next link if there are still changes to load.
     # Otherwise, it would contain a delta link.
     # If it contains neither, it is likely an error.
+    logger.info(url)
+    logger.info(headers)
     r = requests.get(url, headers=headers)
     res = r.json()
 
     if 'error' in res:
+        logger.warning("Error in retrieving the list of folders.")
         return None, res
 
     folders = set()

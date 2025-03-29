@@ -8,3 +8,5 @@ webhooks.csv
 downloads/*
 *.pyc
 script.py
+
+.DS_Store
